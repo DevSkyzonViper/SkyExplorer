@@ -43,6 +43,12 @@ int main(void)
             terminalSizeChange = false;
         }
 
+        // Interrupt that the terminal should get closed
+        if(terminateTerminal)
+        {
+            return 0;
+        }
+
         // Processing game input from keyboard buffer
         if(processGameInput(&window, &folderPath, &folderHead, &fileHead))
         {

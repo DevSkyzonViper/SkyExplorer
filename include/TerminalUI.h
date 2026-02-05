@@ -11,14 +11,11 @@
 #include <string.h>             // String functions
 #include <sys/stat.h>           // File/Folder Serial ID
 #include <errno.h>              // Error conditions
+#include <sys/ioctl.h>          // For ioctl and struct winsize
+#include <unistd.h>             // For STDOUT_FILENO
+#include <signal.h>             // Terminal interrupts
 
-#ifdef _WIN32
-    #include <windows.h>        // Windows API
-#else
-    #include <sys/ioctl.h>      // For ioctl and struct winsize
-    #include <unistd.h>         // For STDOUT_FILENO
-    #include <signal.h>         // Terminal interrupts
-#endif
+
 
 //==================================================================================
 // INCLUDES OF MY OWN LIBRARIES
@@ -32,7 +29,7 @@
 // GLOBAL VARIABLES
 //==================================================================================
 bool terminalSizeChange = false;    // Interrupt signal for terminal size
-
+bool terminateTerminal = false;     // Interrupt signal for terminating the terminal
 
 
 //==================================================================================
@@ -112,21 +109,14 @@ void clearLinkedList(DynamicObject** head)
 // The function gets the current terminal size
 void getTerminalSize(Window* window)
 {
-    #ifdef _WIN32
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-        window->terminal.x = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-        window->terminal.y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-    #else
-        struct winsize w;
-        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1)
-        {
-            writeErrorToLogFile("GetTerminalSize: ioctl");
-            return;
-        }
-        window->terminal.x = w.ws_col;
-        window->terminal.y = w.ws_row;
-    #endif
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1)
+    {
+        writeErrorToLogFile("GetTerminalSize: ioctl");
+        return;
+    }
+    window->terminal.x = w.ws_col;
+    window->terminal.y = w.ws_row;
 }
 
 // The function clears the window by filling it with blank spaces
@@ -387,12 +377,7 @@ void searchAndWriteDirectory(Window* window, char* folderPath, DynamicObject** f
 // and the window buffer for rerendering
 void clearUI(Window* window)
 {
-    #ifdef _WIN32
-        system("cls");
-    #else
-        system("clear");
-    #endif
-
+    system("clear");
     clearWindow(window);
 }
 
@@ -454,10 +439,17 @@ void render(Window* window, char** folderPath, DynamicObject** folderHead, Dynam
 // The function handles terminal window interrupts
 void handle_sigwinch(int sig)
 {
-    //If the terminal size was changed
-    if(sig == 28)
+    switch (sig)
     {
-        terminalSizeChange = true;
+        // If the terminal size was changed
+        case SIGWINCH:
+            terminalSizeChange = true;
+            break;
+
+        // If the termination key got pressed
+        case SIGINT:
+            terminateTerminal = true;
+            break;
     }
 }
 
@@ -466,9 +458,8 @@ void handle_sigwinch(int sig)
 // and enabling raw-mode for the terminal input
 void initWindow(Window* window, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead)
 {
-    #ifndef _WIN32
-        signal(SIGWINCH, handle_sigwinch); // Enabling the window resize interrupt
-    #endif
+    signal(SIGWINCH, handle_sigwinch); // Enabling SIGWINCH interrupt signals
+    signal(SIGINT, handle_sigwinch);   // Enabling SIGINT interrupt signals
 
     getTerminalSize(window); // Getting the terminal size
 
