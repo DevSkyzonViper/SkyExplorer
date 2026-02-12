@@ -6,6 +6,7 @@
 #include <string.h>         // String functions
 #include <fcntl.h>          // Nonblock input buffer
 #include <errno.h>          // Error conditions
+#include <ctype.h>          // Isalnum
 
 
 
@@ -178,6 +179,96 @@ char* removeLastFolder(char* folderPath)
     return newString;
 }
 
+bool findSelectedItem(Cursor* cursor, DynamicObject** current, DynamicObject** itemHead)
+{
+    *current = *itemHead;
+
+    while (*current != NULL)
+    {
+        if (cursor->x == (*current)->x && cursor->y == (*current)->y)
+        {
+            return true;
+        }
+        *current = (*current)->nextObject;
+    }
+
+    return false;
+}
+
+bool findBeforeSelectedItem(DynamicObject** current, DynamicObject** itemHead)
+{
+    DynamicObject* check = *itemHead;
+
+    while (check != NULL)
+    {
+        if (check->nextObject == *current)
+        {
+            *current = check;
+            return true;
+        }
+        check = check->nextObject;
+    }
+
+    return false;
+}
+
+bool findLastItem(DynamicObject** current, DynamicObject** itemHead)
+{
+    *current = *itemHead;
+
+    if(*current != NULL)
+    {
+        while((*current)->nextObject != NULL)
+        {
+            *current = (*current)->nextObject;
+        }
+    }
+
+    return false;
+}
+
+
+
+void deletePopUp(bool isFolder, Cursor* cursorPos, char** folderPath, DynamicObject* current, DynamicObject** folderHead, DynamicObject** fileHead)
+{
+    // Folder
+    if(isFolder)
+    { 
+        char* openCommand = "rm -r '";
+
+        openCommand = appendWordToString(openCommand, *folderPath, false);
+        openCommand = appendWordToString(openCommand, current->path, true);
+        openCommand = appendWordToString(openCommand, "'", false);
+
+        findBeforeSelectedItem(&current, folderHead);
+        cursorPos->y = current->y;
+
+        system(openCommand);
+    }
+    // Files
+    else
+    {
+        char* openCommand = "rm '";
+
+        openCommand = appendWordToString(openCommand, *folderPath, false);
+        openCommand = appendWordToString(openCommand, current->path, true);
+        openCommand = appendWordToString(openCommand, "'", false);
+
+        if(current != *fileHead)
+        {
+            findBeforeSelectedItem(&current, fileHead);
+        }
+        else
+        {
+            findLastItem(&current, folderHead);
+        }
+        cursorPos->y = current->y;
+
+        system(openCommand);
+
+    }
+}
+
 
 
 //==================================================================================
@@ -196,7 +287,7 @@ bool processGameInput(Window* window, char** folderPath, DynamicObject** folderH
     }
     else if (c == '\n')
     {
-        processEnterInput(&window->cursor, &(*folderPath), folderHead, fileHead);
+        processEnterInput(&window->cursor, folderPath, folderHead, fileHead);
     }
     else if (c == '\t')
     {
@@ -204,33 +295,33 @@ bool processGameInput(Window* window, char** folderPath, DynamicObject** folderH
     }
     else if (c == 127 || c == 8)
     {
-        //processBackInputForExplorer();
+        processBackInputForExplorer(&window->cursor, folderPath, folderHead, fileHead);
     }
     else if (c == '\x1b')
     {
         if(popUpActive == false)
         {
-            processArrowKeyInputForExplorer(&window->cursor);
+            processArrowKeyInputForExplorer(&window->cursor, folderPath, folderHead, fileHead);
         }
         else if(popUpActive == true)
         {
             //processArrowKeyInputForMap();
         }
     }
-    //else if (std::isalnum(c))
-    //{
-        //All normal things (numbers, characters)
-        //std::string input(1, c);
+    else if (isalnum(c))
+    {
+        // All normal things (numbers, characters)
+        char input = c;
 
-        //if(popUpActive == false)
-        //{
-        //    processNormalInputForExplorer(input);
-        //}
-        //else if(popUpActive == true)
-        //{
+        if(popUpActive == false)
+        {
+            processNormalInputForExplorer(input);
+        }
+        else if(popUpActive == true)
+        {
             //processNormalInputForMap(input);
-        //}
-    //}
+        }
+    }
     return true;
 }
 
@@ -298,43 +389,28 @@ bool processEnterInput(Cursor* cursorPos, char** folderPath, DynamicObject** fol
                 return false;
             }
 
-            DynamicObject* current = *folderHead;
+            DynamicObject* current;
 
-            if (cursorPos->y == 6)
+            if(findSelectedItem(cursorPos, &current, folderHead))
             {
-                *folderPath = removeLastFolder(*folderPath);
-                cursorPos->y = 6;
-            }
-            else
-            {
-                while (current != NULL)
+                if(current->y == 6)
                 {
-                    if (cursorPos->x == current->x && cursorPos->y == current->y)
-                    {
-                        *folderPath = appendWordToString(*folderPath, current->path, true);
-                        cursorPos->y = 6;
-                        return true;
-                    }
-                    current = current->nextObject;
+                    *folderPath = removeLastFolder(*folderPath);
+                }
+                else
+                {
+                    *folderPath = appendWordToString(*folderPath, current->path, true);
+                    cursorPos->y = 6;
                 }
             }
-
-            current = *fileHead;
-
-            while (current != NULL)
+            else if(findSelectedItem(cursorPos, &current, fileHead))
             {
-                if (cursorPos->x == current->x && cursorPos->y == current->y)
-                {
-                    char* openCommand = "xdg-open ";
+                char* openCommand = "xdg-open ";
 
-                    openCommand = appendWordToString(openCommand, *folderPath, false);
-                    openCommand = appendWordToString(openCommand, current->path, true);
+                openCommand = appendWordToString(openCommand, *folderPath, false);
+                openCommand = appendWordToString(openCommand, current->path, true);
 
-                    system(openCommand);
-
-                    return true;
-                }
-                current = current->nextObject;
+                system(openCommand);
             }
 
         }
@@ -342,6 +418,25 @@ bool processEnterInput(Cursor* cursorPos, char** folderPath, DynamicObject** fol
     // Interacting with a popUp
     else if (popUpActive == true)
     {
+        if (!cursorPos || !*folderPath) {
+            return false;
+        }
+
+        DynamicObject* current;
+
+        if(findSelectedItem(cursorPos, &current, folderHead))
+        {
+            if(current->y != 6)
+            {
+                deletePopUp(true, cursorPos, folderPath, current, folderHead, fileHead);
+            }
+        }
+        else if(findSelectedItem(cursorPos, &current, fileHead))
+        {
+            deletePopUp(false, cursorPos, folderPath, current, folderHead, fileHead);
+        }
+        
+        popUpActive = false;
     }
 
     return true;
@@ -350,7 +445,11 @@ bool processEnterInput(Cursor* cursorPos, char** folderPath, DynamicObject** fol
 // The function processes the general inputs of the user
 // such as numbers, characters, and special characters
 // specifically for the Explorer
-void processNormalInputForExplorer(char input){}
+void processNormalInputForExplorer(char input)
+{
+
+}
+
 
 // The function processes the tab input of the user
 // switchting the panel from left to middle to right
@@ -359,7 +458,6 @@ void processTabInput(Window* window)
     // List of panels:
     // L = Locations
     // F = Files
-    // I = Interactions
 
     if(window->cursor.menu == 'L')
     {
@@ -369,17 +467,40 @@ void processTabInput(Window* window)
     }
     else if(window->cursor.menu == 'F')
     {
-        window->cursor.menu = 'I';
-        window->cursor.x = window->terminal.x - 22;
-        window->cursor.y = 4;
-    }
-    else if(window->cursor.menu == 'I')
-    {
         window->cursor.menu = 'L';
         window->cursor.x = 4;
         window->cursor.y = 4;
     }
 }
+
+bool processBackInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead)
+{
+    // Interacting with the explorer
+    if (popUpActive == false)
+    {
+        // Interaction with the locations
+        if(cursorPos->menu == 'L')
+        {
+        }
+
+        // Interaction with the files
+        if(cursorPos->menu == 'F')
+        {
+            if(cursorPos->y != 6)
+            {
+                popUpActive = true;
+            }
+        }
+    }
+    // Interacting with a popUp
+    else if (popUpActive == true)
+    {
+        popUpActive = false;
+    }
+
+    return true;
+}
+
 
 
 
@@ -389,7 +510,7 @@ void processTabInput(Window* window)
 
 // Processes if there is an option over the current one
 // and switches to it, if possible
-void processUpInputForExplorer(Cursor* cursorPos)
+void processUpInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead)
 {
     if(cursorPos->menu == 'L')
     {
@@ -400,23 +521,31 @@ void processUpInputForExplorer(Cursor* cursorPos)
     }
     else if(cursorPos->menu == 'F')
     {
-        if(cursorPos->y > 6)
+        DynamicObject* current;
+        if(findSelectedItem(cursorPos, &current, folderHead))
         {
-            cursorPos->y = cursorPos->y - 1;
+            findBeforeSelectedItem(&current, folderHead);
+            cursorPos->y = current->y;
         }
-    }
-    else if(cursorPos->menu == 'I')
-    {
-        if(cursorPos->y > 4)
+        else if(findSelectedItem(cursorPos, &current, fileHead))
         {
-            cursorPos->y = cursorPos->y - 2;
+            if(current != *fileHead)
+            {
+                findBeforeSelectedItem(&current, fileHead);
+                cursorPos->y = current->y;
+            }
+            else
+            {
+                findLastItem(&current, folderHead);
+                cursorPos->y = current->y;
+            }
         }
     }
 }
 
 // Processes if there is an option under the current one
 // and switches to it, if possible
-void processDownInputForExplorer(Cursor* cursorPos)
+void processDownInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead)
 {
     if(cursorPos->menu == 'L')
     {
@@ -427,33 +556,181 @@ void processDownInputForExplorer(Cursor* cursorPos)
     }
     else if(cursorPos->menu == 'F')
     {
-        cursorPos->y = cursorPos->y + 1;
-    }
-    else if(cursorPos->menu == 'I')
-    {
-        if(cursorPos->y < 6)
+        DynamicObject* current;
+        if(findSelectedItem(cursorPos, &current, folderHead))
         {
-            cursorPos->y = cursorPos->y + 2;
+            if(current->nextObject != NULL)
+            {
+                current = current->nextObject;
+                cursorPos->y = current->y;
+            }
+            else
+            {
+                if(*fileHead != NULL)
+                {
+                    cursorPos->y = (*fileHead)->y;
+                }
+            }
+        }
+        else if(findSelectedItem(cursorPos, &current, fileHead))
+        {
+            if(current->nextObject != NULL)
+            {
+                current = current->nextObject;
+                cursorPos->y = current->y;
+            }
         }
     }
 }
 
+
+bool processLeftInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead)
+{
+    // Interacting with the explorer
+    if (popUpActive == false)
+    {
+        // Interaction with the locations
+        if(cursorPos->menu == 'L')
+        {
+        }
+
+        // Interaction with the files
+        if(cursorPos->menu == 'F')
+        {
+            cursorPos->y = 6;
+            *folderPath = removeLastFolder(*folderPath);
+        }
+    }
+    // Interacting with a popUp
+    else if (popUpActive == true)
+    {
+    }
+
+    return true; 
+}
+
+
+bool processRightInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead)
+{
+    // Interacting with the explorer
+    if (popUpActive == false)
+    {
+        // Interaction with the locations
+        if(cursorPos->menu == 'L')
+        {
+            if(cursorPos->y == 4)
+            {
+                *folderPath = strdup("/home");
+            }
+            else if(cursorPos->y == 6)
+            {
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/Desktop", getenv("HOME"));
+                *folderPath = strdup(path);
+            }
+            else if(cursorPos->y == 8)
+            {
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/Documents", getenv("HOME"));
+                *folderPath = strdup(path);
+            }
+            else if(cursorPos->y == 10)
+            {
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/Downloads", getenv("HOME"));
+                *folderPath = strdup(path);
+            }
+            else if(cursorPos->y == 12)
+            {
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/Music", getenv("HOME"));
+                *folderPath = strdup(path);
+            }
+            else if(cursorPos->y == 14)
+            {
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/Pictures", getenv("HOME"));
+                *folderPath = strdup(path);
+            }
+            else if(cursorPos->y == 16)
+            {
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/Videos", getenv("HOME"));
+                *folderPath = strdup(path);
+            }
+            else if(cursorPos->y == 18)
+            {
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/.local/share/Trash/files", getenv("HOME"));
+                *folderPath = strdup(path);
+            }
+        }
+
+        // Interaction with the files
+        if(cursorPos->menu == 'F')
+        {
+            if (!cursorPos || !*folderPath) {
+                return false;
+            }
+
+            DynamicObject* current;
+
+            if(findSelectedItem(cursorPos, &current, folderHead))
+            {
+                if(current->y == 6)
+                {
+                    *folderPath = removeLastFolder(*folderPath);
+                }
+                else
+                {
+                    *folderPath = appendWordToString(*folderPath, current->path, true);
+                    cursorPos->y = 6;
+                }
+            }
+            else if(findSelectedItem(cursorPos, &current, fileHead))
+            {
+                char* openCommand = "xdg-open ";
+
+                openCommand = appendWordToString(openCommand, *folderPath, false);
+                openCommand = appendWordToString(openCommand, current->path, true);
+
+                system(openCommand);
+            }
+
+        }
+    }
+    // Interacting with a popUp
+    else if (popUpActive == true)
+    {
+    }
+
+    return true; 
+}
+
+
 // The function processes the arrow keys input for the Explorer
 // to choose the corresponding menu item (ChatGPT)
-void processArrowKeyInputForExplorer(Cursor* cursorPos)
+bool processArrowKeyInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead)
 {
     char seq[2];
     seq[0] = getchar();
     seq[1] = getchar();
+    
     if (seq[0] == '[')
     {
         switch (seq[1])
         {
             case 'A':
-                processUpInputForExplorer(cursorPos);
+                processUpInputForExplorer(cursorPos, folderPath, folderHead, fileHead);
                 break;
             case 'B':
-                processDownInputForExplorer(cursorPos);
+                processDownInputForExplorer(cursorPos, folderPath, folderHead, fileHead);
+                break;
+            case 'C':
+                processRightInputForExplorer(cursorPos, folderPath, folderHead, fileHead);
+                break;
+            case 'D':
+                processLeftInputForExplorer(cursorPos, folderPath, folderHead, fileHead);
                 break;
         }
     }

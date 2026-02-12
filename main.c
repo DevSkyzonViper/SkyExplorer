@@ -20,6 +20,9 @@
 
 int main(void)
 {
+    // Program running bool
+    bool running = true;
+
     // Current Folder and Files, as linked lists
     DynamicObject* folderHead = NULL;
     DynamicObject* fileHead = NULL;
@@ -32,7 +35,7 @@ int main(void)
     initWindow(&window, &folderPath, &folderHead, &fileHead);
     enableRawMode();
     
-    while (true)
+    while (running)
     {
         // Interrupt that the terminal was resized
         if(terminalSizeChange)
@@ -46,7 +49,7 @@ int main(void)
         // Interrupt that the terminal should get closed
         if(terminateTerminal)
         {
-            return 0;
+            running = false;
         }
 
         // Processing game input from keyboard buffer

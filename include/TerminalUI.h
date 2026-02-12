@@ -232,18 +232,7 @@ void searchAndWriteDirectory(Window* window, char* folderPath, DynamicObject** f
 
     int Anzahl = 0;
 
-    // If not in the root directory "/"
-    //if(folderPath[1] != '\0')
-    //{
-    //    Anzahl = 1;
-        // Prints the checkbox for the folder
-    //    writeTextWindow(window, "[ ] -", 25, 6);
-
-        // Prints the foldername onto the window
-    //    writeTextWindow(window, "[..]", 31, 6);
-    //}
-
-
+    
     if(folderNode != NULL && fileNode != NULL)
     {
         // Prints the folders onto the middle panel
@@ -274,7 +263,7 @@ void searchAndWriteDirectory(Window* window, char* folderPath, DynamicObject** f
         }
 
         // Makes the seperation line for folders and files
-        for(int i = 0; i < window->terminal.x - 50; i++)
+        for(int i = 0; i < window->terminal.x - 26; i++)
         {
             writeTextWindow(window, "-", 23 + i, 7 + (Anzahl * 1));
         }
@@ -309,7 +298,7 @@ void searchAndWriteDirectory(Window* window, char* folderPath, DynamicObject** f
     else if(folderNode == NULL && fileNode != NULL)
     {
         // Makes the seperation line for folders and files
-        for(int i = 0; i < window->terminal.x - 50; i++)
+        for(int i = 0; i < window->terminal.x - 26; i++)
         {
             writeTextWindow(window, "-", 23 + i, 7 + (Anzahl * 1));
         }
@@ -408,24 +397,32 @@ void render(Window* window, char** folderPath, DynamicObject** folderHead, Dynam
     writeTextWindow(window, "[ ] Videos",   3, 16);
     writeTextWindow(window, "[ ] Trash",    3, 18);
 
-
     // Makes a search box and writes the current folder into there
-    makeBoxWindow(window, 22, 2, window->terminal.x - 22 - 26, 3);
+    makeBoxWindow(window, 22, 2, window->terminal.x - 24, 3);
     writeTextWindow(window, *folderPath, 24, 3);
 
     // Searches the files and folders in the current folder and creates
     // and fills the middle panel with the sorted list of folders and files
     searchAndWriteDirectory(window, *folderPath, folderHead, fileHead);
 
-    // Making and filling the right interaction panel for the terminal
-    makeBoxWindow(window, window->terminal.x - 26, 2, 25, window->terminal.y - 3);
-    writeTextWindow(window, "[ ] Create Folder", window->terminal.x - 23, 4);
-    writeTextWindow(window, "[ ] Create File", window->terminal.x - 23, 6);
-
-    //Showing the cursor on the screen
+    // Showing the cursor on the screen
     writeTextWindow(window, "*", window->cursor.x, window->cursor.y);
 
-    //Printing out the window onto the terminal
+
+    // Showing a popUp if active
+    if(popUpActive)
+    {
+        makeBoxWindow(window, (window->terminal.x / 2) - 17, (window->terminal.y / 2) - 4, 34, 8);
+        makeBoxWindow(window, (window->terminal.x / 2) - 17, (window->terminal.y / 2) - 4, 34, 3);
+        
+        writeTextWindow(window, "Delete the object?", (window->terminal.x / 2) - 8, (window->terminal.y / 2) - 3);
+
+        writeTextWindow(window, "Are you really sure, you want", (window->terminal.x / 2) - 15, (window->terminal.y / 2));
+        writeTextWindow(window, "to delete the selected object?", (window->terminal.x / 2) - 15, (window->terminal.y / 2) + 1);
+    }
+
+
+    // Printing out the window onto the terminal
     for (int j = 0; j < window->terminal.y - 1; j++)
     {
         for (int i = 0; i < window->terminal.x - 1; i++)
@@ -464,8 +461,8 @@ void initWindow(Window* window, char** folderPath, DynamicObject** folderHead, D
     getTerminalSize(window); // Getting the terminal size
 
     //Creating the window itself
-    window->size.x = 236;
-    window->size.y = 66;
+    window->size.x = 350;
+    window->size.y = 90;
     window->c = (char*)malloc(window->size.x * window->size.y * sizeof(char));
 
     // Setting standard cursor location

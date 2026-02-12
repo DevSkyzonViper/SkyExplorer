@@ -60,6 +60,9 @@ void processNormalInputForExplorer(char input);
 // switchting the panel from left to middle to right
 void processTabInput(Window* window);
 
+bool processBackInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead);
+
+
 
 
 //==================================================================================
@@ -68,15 +71,17 @@ void processTabInput(Window* window);
 
 // Processes if there is an option over the current one
 // and switches to it, if possible
-void processUpInputForExplorer(Cursor* cursorPos);
+void processUpInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead);
 
 // Processes if there is an option under the current one
 // and switches to it, if possible
-void processDownInputForExplorer(Cursor* cursorPos);
+void processDownInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead);
+
+bool processRightInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead);
 
 // The function processes the arrow keys input for the menu
 // to choose the corresponding menu item (ChatGPT)
-void processArrowKeyInputForExplorer(Cursor* cursorPos);
+bool processArrowKeyInputForExplorer(Cursor* cursorPos, char** folderPath, DynamicObject** folderHead, DynamicObject** fileHead);
 
 
 
