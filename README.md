@@ -20,16 +20,19 @@ I dont expect people to use it (please dont, it might delete your data) but I do
 - Can delete files or folders
 
 
-#### General Menu Layout:
+---
+
+### General Menu Layout:
 
 ![General Menu](Img/Screenshots/general-folder.png)
 
 
 
-#### Delete Popup:
+### Delete Popup:
 
 ![Delete Popup](Img/Screenshots/delete-popup.png)
 
+---
 
 
 
