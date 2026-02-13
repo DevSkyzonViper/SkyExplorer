@@ -18,8 +18,6 @@ I dont expect people to use it (please dont, it might delete your data) but I do
 - Folder movement with the arrow keys and enter
 - Can open files with the default program
 - Can delete files or folders
-<<<<<<< HEAD
-=======
 
 
 #### General Menu Layout:
@@ -32,7 +30,7 @@ I dont expect people to use it (please dont, it might delete your data) but I do
 
 ![Delete Popup](Img/Screenshots/delete-popup.png)
 
->>>>>>> fad5cde (New Screenshots)
+
 
 
 ## Missing:
