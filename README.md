@@ -1,5 +1,6 @@
 After getting overwhelmed with my SkyDungeon project, I wanted to start with something simpler. A TUI based explorer :D
-Its the first alpha 0.1.0 release, and I plan to make it usable for the general terminal enjoyer.
+Its the second alpha 0.2.0 release, and I plan to make it usable for the general terminal enjoyer.
+I dont expect people to use it (please dont, it might delete your data) but I dont care, so Im gonna use it lol
 
 
 # A quick run down:
@@ -16,14 +17,16 @@ Its the first alpha 0.1.0 release, and I plan to make it usable for the general 
 - Static locations to open
 - Folder movement with the arrow keys and enter
 - Can open files with the default program
+- Can delete files or folders
 
 
 ## Missing:
  
-- Create or delete files
+- Creating files
 - Renaming files
 - The search bar
 - Favorite locations
+- Copying to clipboard
 
 
 
